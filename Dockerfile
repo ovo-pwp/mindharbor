@@ -1,6 +1,9 @@
 # ============================================================
 # 多阶段构建：Maven 编译 → JRE 运行
 # 前端已构建进 src/main/resources/static，jar 内自带页面
+#
+# 端口说明：云平台（Railway / Render / CloudBase 等）会注入 PORT 环境变量，
+# 这里用 ${PORT:-8080} 兼容；本地 docker run 不传 PORT 时默认 8080。
 # ============================================================
 
 # ---------- 构建阶段 ----------
@@ -25,19 +28,19 @@ ENV TZ=Asia/Shanghai \
     LANG=C.UTF-8 \
     JAVA_OPTS="-XX:MaxRAMPercentage=75 -Dfile.encoding=UTF-8"
 
-RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone \
-    && groupadd -r app && useradd -r -g app app
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 WORKDIR /app
 
 COPY --from=build /build/target/psych-counseling-1.0.0.jar app.jar
-RUN chown -R app:app /app
-USER app
+
+# H2 数据目录。云平台挂载卷到这里时，用 root 运行可避免属主不一致写不进去
+RUN mkdir -p /app/data
 
 EXPOSE 8080
 
 # 用 bash 的 /dev/tcp 探活，避免额外装 curl
 HEALTHCHECK --interval=30s --timeout=5s --start-period=70s --retries=3 \
-  CMD bash -c 'exec 3<>/dev/tcp/127.0.0.1/8080' || exit 1
+  CMD sh -c 'exec 3<>/dev/tcp/127.0.0.1/${PORT:-8080}' || exit 1
 
-ENTRYPOINT ["sh", "-c", "exec java $JAVA_OPTS -jar /app/app.jar"]
+ENTRYPOINT ["sh", "-c", "exec java $JAVA_OPTS -jar /app/app.jar --server.port=${PORT:-8080}"]
