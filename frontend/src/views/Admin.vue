@@ -35,7 +35,7 @@
           </div>
           <div class="card" style="grid-column: span 2">
             <div class="card-title">最新注册</div>
-            <el-table :data="d.recentUsers || []" size="small">
+            <div class="table-scroll"><el-table :data="d.recentUsers || []" size="small">
               <el-table-column prop="realName" label="姓名" width="100" />
               <el-table-column prop="username" label="账号" width="130" />
               <el-table-column label="角色" width="90">
@@ -44,7 +44,7 @@
               <el-table-column label="注册时间">
                 <template #default="{ row }">{{ fmt(row.createdAt) }}</template>
               </el-table-column>
-            </el-table>
+            </el-table></div>
           </div>
         </div>
       </el-tab-pane>
@@ -65,7 +65,7 @@
           <span class="muted" style="font-size: 13px">共 {{ userTotal }} 个账号</span>
         </div>
         <div class="card">
-          <el-table :data="users" style="width: 100%">
+          <div class="table-scroll"><el-table :data="users" style="width: 100%">
             <el-table-column prop="realName" label="姓名" width="120" />
             <el-table-column prop="username" label="账号" width="140" />
             <el-table-column label="角色" width="100">
@@ -93,7 +93,7 @@
                 </el-button>
               </template>
             </el-table-column>
-          </el-table>
+          </el-table></div>
           <el-pagination style="margin-top: 16px; justify-content: flex-end" layout="total, prev, pager, next"
                          :total="userTotal" :page-size="10" :current-page="userQuery.page" @current-change="loadUsers" />
         </div>
@@ -110,7 +110,7 @@
           </el-radio-group>
         </div>
         <div class="card">
-          <el-table :data="doctors" style="width: 100%">
+          <div class="table-scroll"><el-table :data="doctors" style="width: 100%">
             <el-table-column label="申请人" width="130">
               <template #default="{ row }">{{ row.user?.realName }}<div class="muted" style="font-size: 11px">{{ row.user?.username }}</div></template>
             </el-table-column>
@@ -134,7 +134,7 @@
                 <el-button v-else link type="primary" @click="showDoctor(row)">详情</el-button>
               </template>
             </el-table-column>
-          </el-table>
+          </el-table></div>
           <el-empty v-if="doctors.length === 0" description="暂无记录" :image-size="80" />
         </div>
       </el-tab-pane>
@@ -142,7 +142,7 @@
       <!-- 量表 -->
       <el-tab-pane label="量表管理" name="assessments">
         <div class="card">
-          <el-table :data="assessments" style="width: 100%">
+          <div class="table-scroll"><el-table :data="assessments" style="width: 100%">
             <el-table-column prop="code" label="编码" width="90" />
             <el-table-column prop="name" label="名称" min-width="200" />
             <el-table-column prop="questionCount" label="题数" width="80" align="center" />
@@ -158,7 +158,7 @@
                 <el-button link type="primary" @click="openQuestions(row)">题目</el-button>
               </template>
             </el-table-column>
-          </el-table>
+          </el-table></div>
         </div>
       </el-tab-pane>
 
@@ -169,7 +169,7 @@
           <el-button type="primary" @click="newArticle"><el-icon><Plus /></el-icon> 新建文章</el-button>
         </div>
         <div class="card">
-          <el-table :data="articles" style="width: 100%">
+          <div class="table-scroll"><el-table :data="articles" style="width: 100%">
             <el-table-column prop="title" label="标题" min-width="260" show-overflow-tooltip />
             <el-table-column prop="category" label="分类" width="120" />
             <el-table-column prop="author" label="作者" width="110" />
@@ -180,7 +180,7 @@
                 <el-button link type="danger" @click="removeArticle(row)">删除</el-button>
               </template>
             </el-table-column>
-          </el-table>
+          </el-table></div>
         </div>
       </el-tab-pane>
 
@@ -191,7 +191,7 @@
           <el-button type="primary" @click="newNotice"><el-icon><Plus /></el-icon> 新建公告</el-button>
         </div>
         <div class="card">
-          <el-table :data="notices" style="width: 100%">
+          <div class="table-scroll"><el-table :data="notices" style="width: 100%">
             <el-table-column prop="title" label="标题" min-width="220" />
             <el-table-column prop="content" label="内容" min-width="300" show-overflow-tooltip />
             <el-table-column label="发布时间" width="150">
@@ -203,7 +203,7 @@
                 <el-button link type="danger" @click="removeNotice(row)">删除</el-button>
               </template>
             </el-table-column>
-          </el-table>
+          </el-table></div>
         </div>
       </el-tab-pane>
 
@@ -218,7 +218,7 @@
           </el-radio-group>
         </div>
         <div class="card">
-          <el-table :data="resources" style="width: 100%">
+          <div class="table-scroll"><el-table :data="resources" style="width: 100%">
             <el-table-column prop="title" label="标题" min-width="220" show-overflow-tooltip />
             <el-table-column prop="category" label="分类" width="120" />
             <el-table-column label="类型" width="90">
@@ -238,7 +238,7 @@
                 <el-button v-else link @click="previewResource(row)">查看</el-button>
               </template>
             </el-table-column>
-          </el-table>
+          </el-table></div>
           <el-empty v-if="resources.length === 0" description="暂无资源" :image-size="80" />
         </div>
       </el-tab-pane>
@@ -250,7 +250,7 @@
         <span class="muted" style="font-size: 12.5px">共 {{ questions.length }} 题</span>
         <el-button size="small" type="primary" @click="addQuestion">新增题目</el-button>
       </div>
-      <el-table :data="questions" size="small" max-height="70vh">
+      <div class="table-scroll"><el-table :data="questions" size="small" max-height="70vh">
         <el-table-column prop="seq" label="#" width="50" />
         <el-table-column prop="content" label="题目" min-width="240" />
         <el-table-column label="反向" width="70" align="center">
@@ -261,7 +261,7 @@
             <el-button link type="danger" @click="removeQuestion(row)">删除</el-button>
           </template>
         </el-table-column>
-      </el-table>
+      </el-table></div>
     </el-drawer>
 
     <!-- 文章编辑 -->
@@ -600,5 +600,27 @@ onMounted(async () => {
 .todo b {
   color: var(--sage-dark);
   font-size: 16px;
+}
+
+@media (max-width: 768px) {
+  .table-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .table-scroll :deep(.el-table) {
+    min-width: 680px;
+  }
+}
+
+@media (max-width: 768px) {
+  :deep(.el-tabs__item) {
+    font-size: 12.5px;
+    padding: 0 10px;
+    height: 38px;
+    line-height: 38px;
+  }
+  :deep(.el-tabs__header) {
+    margin-bottom: 12px;
+  }
 }
 </style>

@@ -9,7 +9,7 @@
       <el-tab-pane name="apply">
         <template #label>待审申请 <el-badge v-if="applications.length" :value="applications.length" class="tab-badge" /></template>
         <div class="card">
-          <el-table v-if="applications.length" :data="applications" style="width: 100%">
+          <div class="table-scroll"><el-table v-if="applications.length" :data="applications" style="width: 100%">
             <el-table-column label="患者" width="150">
               <template #default="{ row }">
                 <div class="row" style="gap: 8px">
@@ -27,7 +27,7 @@
                 <el-button link type="danger" @click="audit(row, 'REJECTED')">拒绝</el-button>
               </template>
             </el-table-column>
-          </el-table>
+          </el-table></div>
           <el-empty v-if="applications.length === 0" description="暂无待处理申请" :image-size="80" />
         </div>
       </el-tab-pane>
@@ -55,7 +55,7 @@
           </el-button>
         </div>
         <div class="card">
-          <el-table v-if="reports.length" :data="reports" style="width: 100%">
+          <div class="table-scroll"><el-table v-if="reports.length" :data="reports" style="width: 100%">
             <el-table-column prop="title" label="标题" min-width="240" show-overflow-tooltip />
             <el-table-column label="状态" width="100">
               <template #default="{ row }">
@@ -73,7 +73,7 @@
                 <el-button v-if="row.status !== 'PUBLISHED'" link type="success" @click="publish(row)">发布</el-button>
               </template>
             </el-table-column>
-          </el-table>
+          </el-table></div>
           <el-empty v-if="reports.length === 0" description="还没有报告" :image-size="80" />
         </div>
       </el-tab-pane>
@@ -86,7 +86,7 @@
           </el-button>
         </div>
         <div class="card">
-          <el-table v-if="myResources.length" :data="myResources" style="width: 100%">
+          <div class="table-scroll"><el-table v-if="myResources.length" :data="myResources" style="width: 100%">
             <el-table-column prop="title" label="标题" min-width="240" show-overflow-tooltip />
             <el-table-column prop="category" label="分类" width="120" />
             <el-table-column label="类型" width="90">
@@ -100,7 +100,7 @@
               </template>
             </el-table-column>
             <el-table-column prop="viewCount" label="浏览" width="80" align="center" />
-          </el-table>
+          </el-table></div>
           <el-empty v-if="myResources.length === 0" description="还没有发布资源" :image-size="80" />
         </div>
       </el-tab-pane>
@@ -126,25 +126,25 @@
 
         <div class="card" style="margin-bottom: 16px">
           <div class="card-title">近期情绪记录</div>
-          <el-table :data="overview.symptoms" size="small" max-height="260">
+          <div class="table-scroll"><el-table :data="overview.symptoms" size="small" max-height="260">
             <el-table-column prop="recordDate" label="日期" width="105" />
             <el-table-column prop="mood" label="情绪" width="60" align="center" />
             <el-table-column prop="severity" label="困扰" width="60" align="center" />
             <el-table-column prop="energy" label="精力" width="60" align="center" />
             <el-table-column prop="triggerEvent" label="触发事件" min-width="150" show-overflow-tooltip />
-          </el-table>
+          </el-table></div>
         </div>
 
         <div class="card" style="margin-bottom: 16px">
           <div class="card-title">测评历史</div>
-          <el-table :data="overview.assessments" size="small">
+          <div class="table-scroll"><el-table :data="overview.assessments" size="small">
             <el-table-column prop="assessmentName" label="量表" min-width="150" />
             <el-table-column prop="standardScore" label="标准分" width="80" align="center" />
             <el-table-column prop="level" label="结论" width="110" />
             <el-table-column label="时间" width="120">
               <template #default="{ row }">{{ fmt(row.createdAt) }}</template>
             </el-table-column>
-          </el-table>
+          </el-table></div>
         </div>
 
         <el-button type="primary" style="width: 100%" @click="draftFromPatient">
@@ -477,5 +477,27 @@ onMounted(async () => {
   border-radius: 9px;
   padding: 9px 13px;
   margin-bottom: 16px;
+}
+
+@media (max-width: 768px) {
+  .table-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .table-scroll :deep(.el-table) {
+    min-width: 680px;
+  }
+}
+
+@media (max-width: 768px) {
+  :deep(.el-tabs__item) {
+    font-size: 12.5px;
+    padding: 0 10px;
+    height: 38px;
+    line-height: 38px;
+  }
+  :deep(.el-tabs__header) {
+    margin-bottom: 12px;
+  }
 }
 </style>
