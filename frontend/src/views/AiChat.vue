@@ -1,0 +1,501 @@
+<template>
+  <div class="chat-page">
+    <aside class="sessions">
+      <el-button class="new-btn" @click="newSession">
+        <el-icon><Plus /></el-icon> 新的对话
+      </el-button>
+      <div class="list">
+        <div
+          v-for="s in sessions"
+          :key="s.id"
+          class="session"
+          :class="{ active: s.id === currentId }"
+          @click="openSession(s.id)"
+        >
+          <el-icon :size="14"><ChatLineRound /></el-icon>
+          <span class="s-title">{{ s.title }}</span>
+          <el-icon class="del" :size="13" @click.stop="removeSession(s.id)"><Delete /></el-icon>
+        </div>
+        <div v-if="sessions.length === 0" class="empty muted">还没有对话记录</div>
+      </div>
+      <div class="tip">
+        AI 助手提供情绪支持与心理教育，不做诊断。危机情况请拨打 400-161-9995。
+      </div>
+    </aside>
+
+    <section class="main">
+      <div ref="scroller" class="messages">
+        <div v-if="messages.length === 0 && !streaming" class="welcome">
+          <div class="wlogo">心</div>
+          <h2>我在这里，你想从哪儿说起？</h2>
+          <p class="muted">不需要组织语言，想到什么说什么就好。</p>
+          <div class="chips">
+            <span v-for="c in chips" :key="c" @click="quickSend(c)">{{ c }}</span>
+          </div>
+        </div>
+
+        <div v-for="(m, i) in messages" :key="i" class="msg" :class="m.role">
+          <div class="avatar" :class="m.role">{{ m.role === 'user' ? '我' : 'AI' }}</div>
+          <div class="bubble">
+            <div class="markdown-body" v-html="render(m.content)"></div>
+          </div>
+        </div>
+
+        <!-- 等待反馈：思考中 / 正在调用技能。用 trim 判断，避免模型开头的空行撑出一个空气泡 -->
+        <div v-if="streaming && (toolHint || !streamText.trim())" class="tool-hint">
+          <span class="spinner" />
+          {{ toolHint ? `正在调用「${toolHint}」…` : '正在思考…' }}
+        </div>
+
+        <div v-if="streaming && streamText.trim()" class="msg assistant">
+          <div class="avatar assistant">AI</div>
+          <div class="bubble">
+            <div class="markdown-body" v-html="render(streamText)"></div>
+            <span class="cursor" />
+          </div>
+        </div>
+      </div>
+
+      <div class="composer">
+        <el-input
+          v-model="input"
+          type="textarea"
+          :rows="2"
+          resize="none"
+          placeholder="说说你现在的心情…（Enter 发送，Shift + Enter 换行）"
+          @keydown.enter.exact.prevent="send"
+        />
+        <el-button type="primary" :loading="streaming" :disabled="!input.trim()" @click="send">
+          发送
+        </el-button>
+      </div>
+    </section>
+  </div>
+</template>
+
+<script setup>
+import { nextTick, onMounted, ref } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { marked } from 'marked'
+import { api } from '../api'
+
+const sessions = ref([])
+const messages = ref([])
+const currentId = ref(null)
+const input = ref('')
+const streaming = ref(false)
+const streamText = ref('')
+const toolHint = ref('')
+const scroller = ref(null)
+
+const chips = [
+  '最近总是睡不着',
+  '工作压力大到喘不过气',
+  '和家里人吵架了',
+  '我好像对什么都提不起兴趣',
+  '总是很焦虑，停不下来'
+]
+
+marked.setOptions({ breaks: true, gfm: true })
+const render = (text) => marked.parse(text || '')
+
+const scrollBottom = async () => {
+  await nextTick()
+  if (scroller.value) scroller.value.scrollTop = scroller.value.scrollHeight
+}
+
+const loadSessions = async () => {
+  const res = await api.aiSessions()
+  sessions.value = res.data || []
+}
+
+const openSession = async (id) => {
+  currentId.value = id
+  const res = await api.aiMessages(id)
+  messages.value = res.data || []
+  scrollBottom()
+}
+
+const newSession = () => {
+  currentId.value = null
+  messages.value = []
+  input.value = ''
+}
+
+const removeSession = async (id) => {
+  try {
+    await ElMessageBox.confirm('删除这个对话？记录将无法恢复。', '确认删除', { type: 'warning' })
+  } catch (e) {
+    return
+  }
+  await api.aiDeleteSession(id)
+  if (currentId.value === id) newSession()
+  await loadSessions()
+}
+
+const quickSend = (text) => {
+  input.value = text
+  send()
+}
+
+const send = async () => {
+  const content = input.value.trim()
+  if (!content || streaming.value) return
+  input.value = ''
+  messages.value.push({ role: 'user', content })
+  streaming.value = true
+  streamText.value = ''
+  toolHint.value = ''
+  scrollBottom()
+
+  try {
+    const token = localStorage.getItem('token')
+    const resp = await fetch('/api/ai/chat', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({ sessionId: currentId.value, content })
+    })
+    if (resp.status === 401) {
+      // 登录态失效（比如服务重启）：不能只报「对话失败」，否则用户以为功能坏了
+      localStorage.removeItem('token')
+      localStorage.removeItem('user')
+      ElMessage.warning('登录已过期，正在跳转登录页…')
+      setTimeout(() => { location.hash = '#/login' }, 900)
+      return
+    }
+    if (!resp.ok || !resp.body) {
+      throw new Error('连接失败')
+    }
+    const reader = resp.body.getReader()
+    const decoder = new TextDecoder()
+    let buffer = ''
+
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      buffer += decoder.decode(value, { stream: true })
+      const blocks = buffer.split('\n\n')
+      buffer = blocks.pop() || ''
+      for (const block of blocks) {
+        const line = block.split('\n').find((l) => l.startsWith('data:'))
+        if (!line) continue
+        const raw = line.slice(5).trim()
+        if (!raw) continue
+        let evt
+        try {
+          evt = JSON.parse(raw)
+        } catch (e) {
+          continue
+        }
+        if (evt.type === 'delta') {
+          streamText.value += evt.content
+          toolHint.value = ''
+          scrollBottom()
+        } else if (evt.type === 'tool') {
+          // 模型正在调用某个技能，先给用户一个可见的反馈
+          toolHint.value = evt.label || evt.name || ''
+          scrollBottom()
+        } else if (evt.type === 'meta') {
+          if (!currentId.value && evt.sessionId) {
+            currentId.value = evt.sessionId
+          }
+        } else if (evt.type === 'done') {
+          if (evt.sessionId) currentId.value = evt.sessionId
+        } else if (evt.type === 'error') {
+          ElMessage.warning(evt.message || '生成中断')
+        }
+      }
+    }
+
+    if (streamText.value) {
+      messages.value.push({ role: 'assistant', content: streamText.value })
+    }
+    streamText.value = ''
+    await loadSessions()
+    scrollBottom()
+  } catch (e) {
+    ElMessage.error('对话失败，请稍后重试')
+    streamText.value = ''
+  } finally {
+    streaming.value = false
+    toolHint.value = ''
+  }
+}
+
+onMounted(loadSessions)
+</script>
+
+<style scoped>
+.chat-page {
+  display: flex;
+  gap: 16px;
+  height: calc(100vh - 122px);
+}
+
+.sessions {
+  width: 232px;
+  flex: 0 0 232px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+}
+
+.new-btn {
+  width: 100%;
+  margin-bottom: 12px;
+}
+
+.list {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.session {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--ink-2);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.session:hover {
+  background: #f4f3ee;
+}
+
+.session.active {
+  background: var(--sage-soft);
+  color: var(--sage-dark);
+  font-weight: 500;
+}
+
+.s-title {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.del {
+  opacity: 0;
+  color: var(--ink-3);
+}
+
+.session:hover .del {
+  opacity: 1;
+}
+
+.empty {
+  font-size: 12.5px;
+  padding: 16px 6px;
+  text-align: center;
+}
+
+.tip {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+  font-size: 11.5px;
+  line-height: 1.6;
+  color: var(--ink-3);
+}
+
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 26px 30px;
+}
+
+.welcome {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.wlogo {
+  width: 56px;
+  height: 56px;
+  border-radius: 17px;
+  background: linear-gradient(135deg, #5d8f7a, #3c6455);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-size: 24px;
+  margin-bottom: 18px;
+}
+
+.welcome h2 {
+  font-size: 20px;
+  margin: 0 0 8px;
+}
+
+.welcome p {
+  margin: 0 0 24px;
+  font-size: 13px;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+  justify-content: center;
+  max-width: 520px;
+}
+
+.chips span {
+  padding: 7px 13px;
+  border-radius: 20px;
+  border: 1px solid var(--line);
+  font-size: 12.5px;
+  color: var(--ink-2);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.chips span:hover {
+  border-color: var(--sage);
+  color: var(--sage-dark);
+  background: var(--sage-soft);
+}
+
+.msg {
+  display: flex;
+  gap: 11px;
+  margin-bottom: 20px;
+}
+
+.msg.user {
+  flex-direction: row-reverse;
+}
+
+.avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  flex: 0 0 30px;
+  background: #eef1ee;
+  color: var(--ink-2);
+}
+
+.avatar.assistant {
+  background: linear-gradient(135deg, #5d8f7a, #3c6455);
+  color: #fff;
+}
+
+.bubble {
+  max-width: 76%;
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: #f7f6f2;
+  border: 1px solid #eeede7;
+}
+
+.msg.user .bubble {
+  background: var(--sage);
+  border-color: var(--sage);
+  color: #fff;
+}
+
+.msg.user .bubble :deep(.markdown-body) {
+  color: #fff;
+}
+
+.msg.user .bubble :deep(.markdown-body strong),
+.msg.user .bubble :deep(.markdown-body blockquote) {
+  color: #fff;
+}
+
+.msg.user .bubble :deep(.markdown-body blockquote) {
+  background: rgba(255, 255, 255, 0.12);
+  border-left-color: rgba(255, 255, 255, 0.5);
+}
+
+.cursor {
+  display: inline-block;
+  width: 2px;
+  height: 15px;
+  background: var(--sage);
+  vertical-align: text-bottom;
+  animation: blink 1s steps(2) infinite;
+}
+
+/* 技能调用提示 */
+.tool-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 14px 41px;
+  padding: 7px 14px;
+  border-radius: 20px;
+  background: var(--sage-soft);
+  border: 1px solid #d7e6dd;
+  color: var(--sage-dark);
+  font-size: 12.5px;
+}
+
+.spinner {
+  width: 11px;
+  height: 11px;
+  border: 2px solid rgba(79, 125, 107, 0.25);
+  border-top-color: var(--sage);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+.composer {
+  border-top: 1px solid var(--line);
+  padding: 14px 18px;
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+  background: #fcfcfa;
+}
+
+.composer :deep(.el-textarea__inner) {
+  box-shadow: none;
+  border: 1px solid var(--line);
+  padding: 10px 13px;
+}
+
+.composer .el-button {
+  height: 40px;
+  width: 78px;
+}
+</style>

@@ -1,0 +1,15 @@
+# 构建上下文瘦身：只保留后端源码与构建所需文件
+target/
+data/
+.tools/
+frontend/node_modules/
+frontend/dist/
+screenshots/
+.git/
+.gitignore
+*.log
+*.md
+run.log
+smoke-test.sh
+启动系统.bat
+开发模式.bat

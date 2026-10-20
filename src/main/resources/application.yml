@@ -1,0 +1,79 @@
+server:
+  port: 8080
+  servlet:
+    encoding:
+      charset: UTF-8
+      force: true
+
+spring:
+  application:
+    name: psych-counseling
+
+  datasource:
+    url: jdbc:h2:file:./data/mindharbor;MODE=MySQL;DB_CLOSE_ON_EXIT=FALSE;AUTO_RECONNECT=TRUE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: ""
+
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:schema.sql
+      encoding: UTF-8
+
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: GMT+8
+    default-property-inclusion: non_null
+
+  mvc:
+    async:
+      request-timeout: 300000
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+    default-enum-type-handler: org.apache.ibatis.type.EnumTypeHandler
+  global-config:
+    banner: false
+    db-config:
+      id-type: auto
+      table-underline: true
+
+# Sa-Token 认证配置
+sa-token:
+  token-name: Authorization
+  timeout: 604800
+  active-timeout: -1
+  is-concurrent: true
+  is-share: false
+  token-style: uuid
+  is-log: false
+  is-read-cookie: false
+  is-read-header: true
+  token-prefix: Bearer
+  jwt-secret-key: mindharbor-psych-counseling-2026-secret-key-please-change
+
+# AI 大模型（OpenAI 兼容协议，可接 DashScope / 硅基流动 / agnes 等网关）
+ai:
+  enabled: true
+  base-url: ${AI_BASE_URL:https://dashscope.aliyuncs.com/compatible-mode/v1}
+  api-key: ${DASHSCOPE_API_KEY:${AI_API_KEY:}}
+  model: ${AI_MODEL:qwen-plus}
+  temperature: 0.7
+  max-tokens: ${AI_MAX_TOKENS:2000}
+
+# 应用自身配置
+app:
+  # 登录页是否展示演示账号。本地开发 true，公开部署必须 false
+  demo-accounts: ${DEMO_ACCOUNTS:true}
+
+logging:
+  level:
+    root: INFO
+    com.mindharbor: INFO

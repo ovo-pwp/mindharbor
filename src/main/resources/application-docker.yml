@@ -1,0 +1,55 @@
+# Docker 部署 profile：MySQL + Redis + 应用
+# 所有连接信息都可用环境变量覆盖，docker-compose.yml 里已注入
+
+# 显式开启 Redis 会话存储
+app:
+  session-store: redis
+  # 容器部署一律不暴露演示账号
+  demo-accounts: ${DEMO_ACCOUNTS:false}
+
+server:
+  port: 8080
+
+spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://mysql:3306/mindharbor?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useSSL=false}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: ${MYSQL_USER:root}
+    password: ${MYSQL_PASSWORD:mindharbor123}
+    hikari:
+      maximum-pool-size: 15
+      minimum-idle: 3
+      connection-timeout: 10000
+
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:schema-mysql.sql
+      encoding: UTF-8
+
+  # 配了 host 就会启用 SaTokenRedisConfig，把会话存到 Redis
+  data:
+    redis:
+      host: ${REDIS_HOST:redis}
+      port: ${REDIS_PORT:6379}
+      timeout: 3s
+      lettuce:
+        pool:
+          max-active: 16
+          max-idle: 8
+          min-idle: 1
+
+  h2:
+    console:
+      enabled: false
+
+ai:
+  enabled: true
+  base-url: ${AI_BASE_URL:https://dashscope.aliyuncs.com/compatible-mode/v1}
+  api-key: ${DASHSCOPE_API_KEY:}
+  model: ${AI_MODEL:qwen-plus}
+
+logging:
+  level:
+    root: INFO
+    com.mindharbor: INFO

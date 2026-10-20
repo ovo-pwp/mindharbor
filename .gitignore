@@ -1,0 +1,13 @@
+target/
+data/
+*.log
+.idea/
+*.iml
+.vscode/
+node_modules/
+frontend/dist/
+.tools/
+ai-config.env
+.env
+*.tmp
+.DS_Store
