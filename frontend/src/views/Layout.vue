@@ -1,12 +1,17 @@
 <template>
   <div class="shell">
-    <aside class="side">
+    <div v-if="mobileOpen" class="overlay" @click="mobileOpen = false" />
+
+    <aside class="side" :class="{ open: mobileOpen }">
       <div class="brand">
         <div class="logo">心</div>
         <div>
           <div class="brand-name">心屿</div>
           <div class="brand-sub">MindHarbor</div>
         </div>
+        <button class="close-btn" @click="mobileOpen = false">
+          <span class="x" />
+        </button>
       </div>
 
       <nav class="nav">
@@ -36,9 +41,13 @@
 
     <main class="main">
       <header class="topbar">
+        <button class="hamburger" @click="mobileOpen = true">
+          <span /><span /><span />
+        </button>
         <div class="crumb">{{ $route.meta.title || '心屿' }}</div>
-        <div class="row" style="gap: 12px">
-          <span class="dot" /> <span class="muted" style="font-size: 12px">AI 助手在线</span>
+        <div class="row status">
+          <span class="dot" />
+          <span class="muted status-text">AI 助手在线</span>
         </div>
       </header>
       <div class="content">
@@ -53,13 +62,18 @@
 </template>
 
 <script setup>
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '../store/user'
 
 const store = useUserStore()
 const route = useRoute()
 const router = useRouter()
+
+const mobileOpen = ref(false)
+
+// 切页面自动收起抽屉
+watch(() => route.path, () => { mobileOpen.value = false })
 
 // 有 token 但本地没有用户信息（例如换设备、清过缓存）时补拉一次
 onMounted(() => {
@@ -157,6 +171,38 @@ const logout = () => {
   text-transform: uppercase;
 }
 
+.close-btn {
+  display: none;
+  margin-left: auto;
+  width: 30px;
+  height: 30px;
+  border: none;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  cursor: pointer;
+  position: relative;
+}
+
+.close-btn .x::before,
+.close-btn .x::after {
+  content: '';
+  position: absolute;
+  left: 9px;
+  top: 14px;
+  width: 12px;
+  height: 1.5px;
+  background: #cfdcd4;
+  border-radius: 1px;
+}
+
+.close-btn .x::before {
+  transform: rotate(45deg);
+}
+
+.close-btn .x::after {
+  transform: rotate(-45deg);
+}
+
 .nav {
   display: flex;
   flex-direction: column;
@@ -252,6 +298,29 @@ const logout = () => {
   border-bottom: 1px solid var(--line);
 }
 
+.hamburger {
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 3px;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: #fff;
+  cursor: pointer;
+  padding: 0;
+}
+
+.hamburger span {
+  display: block;
+  width: 15px;
+  height: 1.5px;
+  background: var(--ink-2);
+  border-radius: 1px;
+}
+
 .crumb {
   font-size: 13px;
   color: var(--ink-3);
@@ -271,6 +340,13 @@ const logout = () => {
   padding: 26px 28px 40px;
 }
 
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(18, 28, 24, 0.46);
+  z-index: 1000;
+}
+
 .fade-enter-active,
 .fade-leave-active {
   transition: opacity 0.18s ease, transform 0.18s ease;
@@ -283,5 +359,54 @@ const logout = () => {
 
 .fade-leave-to {
   opacity: 0;
+}
+
+/* ==================== 移动端 ==================== */
+@media (max-width: 768px) {
+  .hamburger {
+    display: flex;
+  }
+
+  .side {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 264px;
+    flex-basis: 264px;
+    z-index: 1001;
+    transform: translateX(-100%);
+    transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 6px 0 28px rgba(0, 0, 0, 0.22);
+  }
+
+  .side.open {
+    transform: translateX(0);
+  }
+
+  .close-btn {
+    display: block;
+  }
+
+  .topbar {
+    padding: 0 14px;
+    gap: 10px;
+    height: 52px;
+    flex-basis: 52px;
+  }
+
+  .crumb {
+    flex: 1;
+    font-size: 13.5px;
+    color: var(--ink-2);
+  }
+
+  .status-text {
+    display: none;
+  }
+
+  .content {
+    padding: 14px 14px 28px;
+  }
 }
 </style>

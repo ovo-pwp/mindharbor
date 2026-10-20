@@ -105,9 +105,13 @@ a {
 
 @media (max-width: 720px) {
   .g2,
-  .g3,
-  .g4 {
+  .g3 {
     grid-template-columns: 1fr;
+  }
+
+  /* 统计卡内容少，两列比一列省空间 */
+  .g4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -236,4 +240,114 @@ a {
 
 ::-webkit-scrollbar-track {
   background: transparent;
+}
+
+
+/* ==================== 移动端全局适配 ==================== */
+@media (max-width: 768px) {
+  body {
+    font-size: 13.5px;
+  }
+
+  .page-head {
+    margin-bottom: 14px;
+  }
+
+  .page-head h1 {
+    font-size: 19px;
+    margin-bottom: 4px;
+  }
+
+  .page-head p {
+    font-size: 12.5px;
+    line-height: 1.6;
+  }
+
+  .card {
+    padding: 15px;
+    border-radius: 12px;
+  }
+
+  .card-title {
+    font-size: 14px;
+    margin-bottom: 11px;
+  }
+
+  .grid {
+    gap: 11px;
+  }
+
+  .stack {
+    gap: 11px;
+  }
+
+  .row {
+    gap: 8px;
+  }
+
+  /* 表格：字号缩小，允许内部横向滚动，不撑破页面 */
+  .el-table {
+    font-size: 12.5px;
+  }
+
+  .el-table .cell {
+    padding: 0 8px;
+    line-height: 1.5;
+  }
+
+  .el-table th.el-table__cell {
+    padding: 8px 0;
+  }
+
+  .el-table td.el-table__cell {
+    padding: 7px 0;
+  }
+
+  /* 弹窗 / 抽屉在手机上留出边距 */
+  .el-dialog {
+    width: 92% !important;
+    margin-top: 8vh !important;
+  }
+
+  .el-drawer {
+    width: 100% !important;
+  }
+
+  .el-message-box {
+    width: 88% !important;
+  }
+
+  /* 分页居中 */
+  .el-pagination {
+    justify-content: center;
+  }
+
+  /* 表单标签更紧凑 */
+  .el-form-item {
+    margin-bottom: 14px;
+  }
+
+  .el-form-item__label {
+    font-size: 12.5px;
+    padding-bottom: 4px !important;
+  }
+
+  .markdown-body {
+    font-size: 13.5px;
+    line-height: 1.8;
+  }
+
+  .markdown-body h1 {
+    font-size: 18px;
+  }
+
+  .markdown-body h2 {
+    font-size: 16px;
+  }
+
+  .markdown-body table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
 }

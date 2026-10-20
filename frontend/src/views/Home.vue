@@ -273,4 +273,42 @@ onMounted(async () => {
   color: var(--sage);
   cursor: pointer;
 }
+
+@media (max-width: 768px) {
+  .hero {
+    padding: 20px 18px;
+    border-radius: 14px;
+    margin-bottom: 13px;
+  }
+  .hero-art {
+    display: none;
+  }
+  .hi {
+    font-size: 18px;
+  }
+  .hero .muted {
+    font-size: 12.5px;
+    margin-top: 6px;
+  }
+  .stat .value {
+    font-size: 22px;
+  }
+  .stat .label {
+    font-size: 11.5px;
+  }
+  .rec-item {
+    padding: 9px 0;
+  }
+  .rec-icon {
+    width: 30px;
+    height: 30px;
+    flex-basis: 30px;
+  }
+  .rec-title {
+    font-size: 13px;
+  }
+  .notice-body {
+    font-size: 12px;
+  }
+}
 </style>

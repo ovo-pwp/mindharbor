@@ -10,7 +10,7 @@
       </el-button>
     </div>
 
-    <div class="grid g3" style="margin-bottom: 16px">
+    <div class="grid g3 stat3" style="margin-bottom: 16px">
       <div class="card mini">
         <div class="muted">记录天数</div>
         <div class="v">{{ trend.count || 0 }}<span>天</span></div>
@@ -39,7 +39,7 @@
 
     <div class="card">
       <div class="card-title">记录明细</div>
-      <el-table :data="records" style="width: 100%">
+      <div class="table-scroll"><el-table :data="records" style="width: 100%">
         <el-table-column prop="recordDate" label="日期" width="110" />
         <el-table-column label="情绪" width="110">
           <template #default="{ row }"><span :style="{ color: moodColor(row.mood) }">{{ moodEmoji(row.mood) }} {{ row.mood }}</span></template>
@@ -54,7 +54,7 @@
             <el-button link type="danger" @click="remove(row)">删除</el-button>
           </template>
         </el-table-column>
-      </el-table>
+      </el-table></div>
       <el-empty v-if="records.length === 0" description="还没有记录，从今天开始吧" :image-size="80" />
     </div>
 
@@ -218,5 +218,36 @@ onMounted(load)
 .chart {
   height: 260px;
   width: 100%;
+}
+
+@media (max-width: 768px) {
+  .stat3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .stat3 .card {
+    padding: 12px 6px;
+  }
+  .stat3 .mini .v {
+    font-size: 19px;
+  }
+  .stat3 .muted {
+    font-size: 11.5px;
+  }
+  .chart {
+    height: 200px;
+  }
+}
+
+@media (max-width: 768px) {
+  .table-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin: 0 -4px;
+    padding: 0 4px;
+  }
+  .table-scroll :deep(.el-table) {
+    min-width: 680px;
+  }
 }
 </style>

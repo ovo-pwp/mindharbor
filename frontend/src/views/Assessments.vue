@@ -26,7 +26,7 @@
 
     <div class="card" style="margin-top: 22px">
       <div class="card-title">历史记录</div>
-      <el-table v-if="records.length" :data="records" style="width: 100%">
+      <div v-if="records.length" class="table-scroll"><el-table :data="records" style="width: 100%">
         <el-table-column prop="assessmentName" label="量表" min-width="160" />
         <el-table-column prop="rawScore" label="粗分" width="80" align="center" />
         <el-table-column prop="standardScore" label="标准分" width="90" align="center" />
@@ -43,7 +43,7 @@
             <el-button link type="primary" @click="$router.push(`/assessments/result/${row.id}`)">查看</el-button>
           </template>
         </el-table-column>
-      </el-table>
+      </el-table></div>
       <div v-else class="muted" style="font-size: 13px; padding: 10px 0">还没有测评记录</div>
     </div>
   </div>
@@ -126,5 +126,17 @@ onMounted(async () => {
   border-radius: 5px;
   background: #f2f1ec;
   color: var(--ink-3);
+}
+
+@media (max-width: 768px) {
+  .table-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin: 0 -4px;
+    padding: 0 4px;
+  }
+  .table-scroll :deep(.el-table) {
+    min-width: 680px;
+  }
 }
 </style>

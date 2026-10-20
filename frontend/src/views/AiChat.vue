@@ -24,6 +24,10 @@
     </aside>
 
     <section class="main">
+      <div class="m-head">
+        <span class="m-title">AI 心理助手</span>
+        <button class="m-new" @click="newSession">+ 新对话</button>
+      </div>
       <div ref="scroller" class="messages">
         <div v-if="messages.length === 0 && !streaming" class="welcome">
           <div class="wlogo">心</div>
@@ -62,7 +66,7 @@
           type="textarea"
           :rows="2"
           resize="none"
-          placeholder="说说你现在的心情…（Enter 发送，Shift + Enter 换行）"
+          :placeholder="placeholderText"
           @keydown.enter.exact.prevent="send"
         />
         <el-button type="primary" :loading="streaming" :disabled="!input.trim()" @click="send">
@@ -86,6 +90,11 @@ const input = ref('')
 const streaming = ref(false)
 const streamText = ref('')
 const toolHint = ref('')
+
+// 手机上 Enter 是换行不是发送，别给错误提示
+const placeholderText = (typeof window !== 'undefined' && window.innerWidth <= 768)
+  ? '说说你现在的心情…'
+  : '说说你现在的心情…（Enter 发送，Shift + Enter 换行）'
 const scroller = ref(null)
 
 const chips = [
@@ -497,5 +506,79 @@ onMounted(loadSessions)
 .composer .el-button {
   height: 40px;
   width: 78px;
+}
+
+/* 移动端顶部条，桌面隐藏 */
+.m-head {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .chat-page {
+    height: calc(100vh - 100px);
+    gap: 0;
+  }
+  .sessions {
+    display: none;
+  }
+  .m-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--line);
+    flex: 0 0 auto;
+  }
+  .m-title {
+    font-size: 13.5px;
+    font-weight: 500;
+    color: var(--ink);
+  }
+  .m-new {
+    font-size: 12.5px;
+    color: var(--sage-dark);
+    background: var(--sage-soft);
+    border: none;
+    border-radius: 14px;
+    padding: 5px 12px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .messages {
+    padding: 16px 13px;
+  }
+  .bubble {
+    max-width: 86%;
+    padding: 10px 13px;
+    font-size: 13.5px;
+  }
+  .avatar {
+    width: 26px;
+    height: 26px;
+    flex-basis: 26px;
+    font-size: 11px;
+  }
+  .composer {
+    padding: 10px 12px;
+    gap: 8px;
+  }
+  .composer .el-button {
+    width: 64px;
+    height: 38px;
+  }
+  .tool-hint {
+    margin-left: 35px;
+    font-size: 12px;
+  }
+  .welcome {
+    padding: 0 6px;
+  }
+  .welcome h2 {
+    font-size: 17px;
+  }
+  .chips span {
+    font-size: 12px;
+    padding: 6px 11px;
+  }
 }
 </style>
