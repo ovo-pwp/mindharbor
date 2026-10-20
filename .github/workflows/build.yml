@@ -1,0 +1,64 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Set up Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Build frontend
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build
+
+      - name: Bundle frontend into backend resources
+        run: |
+          rm -rf src/main/resources/static
+          mkdir -p src/main/resources/static
+          cp -r frontend/dist/* src/main/resources/static/
+
+      - name: Build backend
+        run: mvn -B clean package -DskipTests
+
+      - name: Upload jar
+        uses: actions/upload-artifact@v4
+        with:
+          name: psych-counseling-jar
+          path: target/psych-counseling-1.0.0.jar
+          retention-days: 7
+
+      - name: Smoke test (start app and hit health endpoint)
+        run: |
+          java -jar target/psych-counseling-1.0.0.jar --server.port=8080 &
+          for i in $(seq 1 40); do
+            sleep 2
+            if curl -fsS http://localhost:8080/api/public/health | grep -q '"status":"UP"'; then
+              echo "health check passed"
+              exit 0
+            fi
+          done
+          echo "app failed to start"
+          exit 1
