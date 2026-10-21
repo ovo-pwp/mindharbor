@@ -7,6 +7,51 @@
 
 ---
 
+## 效果预览
+
+### 患者端
+
+<table>
+<tr>
+<td width="33%"><img src="docs/screenshots/01-home.png" alt="患者首页"><br><sub>首页 · 情绪概览与推荐</sub></td>
+<td width="33%"><img src="docs/screenshots/02-ai.png" alt="AI 心理助手"><br><sub>AI 助手 · 流式对话 + 技能调用</sub></td>
+<td width="33%"><img src="docs/screenshots/03-symptoms.png" alt="情绪记录"><br><sub>情绪记录 · 趋势图与明细</sub></td>
+</tr>
+<tr>
+<td><img src="docs/screenshots/04-micro.png" alt="今天的小事"><br><sub>今天的小事 · 按能量给选项</sub></td>
+<td><img src="docs/screenshots/05-assessments.png" alt="心理测评"><br><sub>心理测评 · SDS / SAS</sub></td>
+<td><img src="docs/screenshots/06-doctors.png" alt="找咨询师"><br><sub>找咨询师 · 筛选与申请</sub></td>
+</tr>
+</table>
+
+### 医生端 / 管理端
+
+<table>
+<tr>
+<td width="50%"><img src="docs/screenshots/08-workbench.png" alt="医生工作台"><br><sub>医生工作台 · 患者档案与报告</sub></td>
+<td width="50%"><img src="docs/screenshots/09-admin.png" alt="管理后台"><br><sub>管理后台 · 数据概览与审核</sub></td>
+</tr>
+</table>
+
+### 移动端
+
+<table>
+<tr>
+<td width="25%"><img src="docs/screenshots/m01-home.png" alt="手机首页"></td>
+<td width="25%"><img src="docs/screenshots/m02-ai.png" alt="手机 AI"></td>
+<td width="25%"><img src="docs/screenshots/m03-micro.png" alt="手机今天的小事"></td>
+<td width="25%"><img src="docs/screenshots/m04-symptoms.png" alt="手机情绪记录"></td>
+</tr>
+<tr>
+<td><sub>首页</sub></td>
+<td><sub>AI 助手</sub></td>
+<td><sub>今天的小事</sub></td>
+<td><sub>情绪记录</sub></td>
+</tr>
+</table>
+
+---
+
 ## 一、技术栈
 
 | 层 | 技术 |
