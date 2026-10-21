@@ -22,6 +22,9 @@
 <td><img src="docs/screenshots/05-assessments.png" alt="心理测评"><br><sub>心理测评 · SDS / SAS</sub></td>
 <td><img src="docs/screenshots/06-doctors.png" alt="找咨询师"><br><sub>找咨询师 · 筛选与申请</sub></td>
 </tr>
+<tr>
+<td colspan="3"><img src="docs/screenshots/10-practice.png" alt="心理练习"><br><sub>心理练习 · 呼吸引导 / 思维记录 / 身体扫描</sub></td>
+</tr>
 </table>
 
 ### 医生端 / 管理端

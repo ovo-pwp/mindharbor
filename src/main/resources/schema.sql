@@ -203,3 +203,16 @@ CREATE TABLE IF NOT EXISTS micro_action_log (
 );
 
 CREATE INDEX IF NOT EXISTS idx_micro_user ON micro_action_log (user_id, action_date);
+
+CREATE TABLE IF NOT EXISTS practice_log (
+    id          BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id     BIGINT       NOT NULL,
+    type        VARCHAR(32)  NOT NULL,
+    duration    INT,
+    content     VARCHAR(4000),
+    mood_before INT,
+    mood_after  INT,
+    created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_practice_user ON practice_log (user_id, type);

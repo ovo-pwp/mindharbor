@@ -89,6 +89,7 @@ const patientMenus = [
   { path: '/articles', label: '心理科普', icon: 'Reading' },
   { path: '/symptoms', label: '情绪记录', icon: 'TrendCharts' },
   { path: '/micro', label: '今天的小事', icon: 'Sunny' },
+  { path: '/practice', label: '心理练习', icon: 'MagicStick' },
   { path: '/consult', label: '消息', icon: 'Message' },
   { path: '/reports', label: '我的报告', icon: 'Tickets' },
   { path: '/profile', label: '个人中心', icon: 'Setting' }

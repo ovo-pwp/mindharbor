@@ -85,6 +85,12 @@ export const api = {
   symptomTrend: (days) => http.get('/symptoms/trend', { params: { days } }),
   deleteSymptom: (id) => http.delete(`/symptoms/${id}`),
 
+  // 引导式练习
+  practiceTypes: () => http.get('/practice/types'),
+  practiceLog: (data) => http.post('/practice/log', data),
+  practiceRecent: (days = 30) => http.get('/practice/recent', { params: { days } }),
+  practiceSummary: () => http.get('/practice/summary'),
+
   // 今天的小事（微行动）
   microLevels: () => http.get('/micro/levels'),
   microOptions: (level) => http.get('/micro/options', { params: { level } }),

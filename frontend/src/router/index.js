@@ -19,6 +19,7 @@ const routes = [
       { path: 'articles/:id', name: 'article-detail', component: () => import('../views/ArticleDetail.vue'), meta: { title: '科普详情' } },
       { path: 'symptoms', name: 'symptoms', component: () => import('../views/Symptoms.vue'), meta: { title: '情绪记录' } },
       { path: 'micro', name: 'micro', component: () => import('../views/MicroActions.vue'), meta: { title: '今天的小事' } },
+      { path: 'practice', name: 'practice', component: () => import('../views/Practice.vue'), meta: { title: '心理练习' } },
       { path: 'consult', name: 'consult', component: () => import('../views/Consult.vue'), meta: { title: '消息' } },
       { path: 'reports', name: 'reports', component: () => import('../views/Reports.vue'), meta: { title: '我的报告' } },
       { path: 'profile', name: 'profile', component: () => import('../views/Profile.vue'), meta: { title: '个人中心' } },

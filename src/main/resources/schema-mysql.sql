@@ -207,3 +207,15 @@ CREATE TABLE IF NOT EXISTS micro_action_log (
     created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
     KEY idx_micro_user (user_id, action_date)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_general_ci;
+
+CREATE TABLE IF NOT EXISTS practice_log (
+    id          BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id     BIGINT       NOT NULL,
+    type        VARCHAR(32)  NOT NULL,
+    duration    INT,
+    content     VARCHAR(4000),
+    mood_before INT,
+    mood_after  INT,
+    created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    KEY idx_practice_user (user_id, type)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_general_ci;
