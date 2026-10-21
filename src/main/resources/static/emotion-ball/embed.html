@@ -55,6 +55,7 @@
         pending = null;
       }
       fit();
+      window.__ball = ball;
       parent.postMessage({ type: 'ball-ready' }, '*');
     } catch (e) {
       parent.postMessage({ type: 'ball-error', message: String(e && e.message || e) }, '*');
@@ -63,7 +64,17 @@
 
   window.addEventListener('message', function (ev) {
     var d = ev.data;
-    if (!d || d.type !== 'emotion') return;
+    if (!d) return;
+
+    // 视线跟随：父页面传来归一化坐标 (-1..1)
+    if (d.type === 'gaze') {
+      if (ball && ball.setGaze) {
+        try { ball.setGaze(d.x, d.y); } catch (e) { }
+      }
+      return;
+    }
+
+    if (d.type !== 'emotion') return;
     var id = String(d.id || '');
     if (!ball) { pending = id; return; }
     try {

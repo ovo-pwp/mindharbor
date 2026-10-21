@@ -85,7 +85,7 @@
 </template>
 
 <script setup>
-import { computed, nextTick, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { marked } from 'marked'
 import { api } from '../api'
@@ -271,6 +271,34 @@ const send = async () => {
     setBall('02')
   }
 }
+
+// 小球视线跟随鼠标：全局监听 + rAF 节流，坐标归一化后发给 iframe
+let gazeLock = false
+const onMouseMove = (e) => {
+  if (gazeLock) return
+  gazeLock = true
+  requestAnimationFrame(() => {
+    gazeLock = false
+    const el = document.querySelector('.ball-wrap')
+    if (!el) return
+    const r = el.getBoundingClientRect()
+    const cx = r.left + r.width / 2
+    const cy = r.top + r.height / 2
+    const nx = Math.max(-1, Math.min(1, (e.clientX - cx) / 240))
+    const ny = Math.max(-1, Math.min(1, (e.clientY - cy) / 240))
+    try {
+      ballFrame.value?.contentWindow?.postMessage({ type: 'gaze', x: nx, y: ny }, '*')
+    } catch (err) { }
+  })
+}
+
+onMounted(() => {
+  window.addEventListener('mousemove', onMouseMove, { passive: true })
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('mousemove', onMouseMove)
+})
 
 onMounted(loadSessions)
 </script>
@@ -629,9 +657,9 @@ onMounted(loadSessions)
 }
 
 .ball-wrap {
-  width: 34px;
-  height: 34px;
-  flex: 0 0 34px;
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
   overflow: hidden;
   border-radius: 50%;
 }
@@ -642,7 +670,7 @@ onMounted(loadSessions)
   height: 700px;
   border: 0;
   display: block;
-  transform: scale(0.04857);
+  transform: scale(0.06286);
   transform-origin: top left;
 }
 
