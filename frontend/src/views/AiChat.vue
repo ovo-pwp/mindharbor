@@ -282,24 +282,27 @@ const send = async () => {
   }
 }
 
-// 小球视线跟随鼠标：全局监听 + rAF 节流，坐标归一化后发给 iframe
-let gazeLock = false
+// 小球视线跟随鼠标。
+// 注意：坐标必须在这里同步取出来，不能放进 requestAnimationFrame ——
+// 事件对象在回调执行时可能已被浏览器回收，读出来是 0。
+let lastGazeAt = 0
 const onMouseMove = (e) => {
-  if (gazeLock) return
-  gazeLock = true
-  requestAnimationFrame(() => {
-    gazeLock = false
-    const el = document.querySelector('.ball-wrap')
-    if (!el) return
-    const r = el.getBoundingClientRect()
-    const cx = r.left + r.width / 2
-    const cy = r.top + r.height / 2
-    const nx = Math.max(-1, Math.min(1, (e.clientX - cx) / 240))
-    const ny = Math.max(-1, Math.min(1, (e.clientY - cy) / 240))
-    try {
-      ballFrame.value?.contentWindow?.postMessage({ type: 'gaze', x: nx, y: ny }, '*')
-    } catch (err) { }
-  })
+  const now = performance.now()
+  if (now - lastGazeAt < 60) return
+  lastGazeAt = now
+
+  const x = e.clientX
+  const y = e.clientY
+  const el = document.querySelector('.ball-wrap')
+  if (!el) return
+  const r = el.getBoundingClientRect()
+  const cx = r.left + r.width / 2
+  const cy = r.top + r.height / 2
+  const nx = Math.max(-1, Math.min(1, (x - cx) / 200))
+  const ny = Math.max(-1, Math.min(1, (y - cy) / 200))
+  try {
+    ballFrame.value?.contentWindow?.postMessage({ type: 'gaze', x: nx, y: ny }, '*')
+  } catch (err) { }
 }
 
 onMounted(() => {
@@ -667,9 +670,9 @@ onMounted(loadSessions)
 }
 
 .ball-wrap {
-  width: 44px;
-  height: 44px;
-  flex: 0 0 44px;
+  width: 56px;
+  height: 56px;
+  flex: 0 0 56px;
   overflow: hidden;
   border-radius: 50%;
 }
@@ -680,7 +683,7 @@ onMounted(loadSessions)
   height: 700px;
   border: 0;
   display: block;
-  transform: scale(0.06286);
+  transform: scale(0.08);
   transform-origin: top left;
 }
 
