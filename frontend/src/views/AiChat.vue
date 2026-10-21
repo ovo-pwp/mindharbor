@@ -300,6 +300,12 @@ const onMouseMove = (e) => {
   const cy = r.top + r.height / 2
   const nx = Math.max(-1, Math.min(1, (x - cx) / 200))
   const ny = Math.max(-1, Math.min(1, (y - cy) / 200))
+
+  // 引擎内部视线幅度只有球体的 3.4%，缩到 56px 后不足 2px，看不出来。
+  // 不改引擎（放大内部值会触发彩带异常），改成整体位移 + 轻微倾斜，肉眼更明显。
+  el.style.transform = 'translate(' + (nx * 3.5).toFixed(1) + 'px, ' + (ny * 2.5).toFixed(1) + 'px) rotate(' + (nx * 4).toFixed(1) + 'deg)'
+  el.style.transition = 'transform 0.25s cubic-bezier(0.33, 0, 0.67, 1)'
+
   try {
     ballFrame.value?.contentWindow?.postMessage({ type: 'gaze', x: nx, y: ny }, '*')
   } catch (err) { }
