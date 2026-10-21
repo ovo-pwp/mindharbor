@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>Emotion Ball</title>
+<style>
+  html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    background: transparent;
+    overflow: hidden;
+  }
+  #stage {
+    width: 100%;
+    height: 100%;
+    display: grid;
+    place-items: center;
+  }
+</style>
+</head>
+<body>
+<div id="stage"></div>
+
+<script src="rings.js"></script>
+<script src="emotions.js"></script>
+<script src="ball.js"></script>
+<script src="engine.js"></script>
+<script>
+  var ball = null;
+  var pending = null;
+
+  // 球的基础渲染尺寸约 700px，按容器大小整体缩放，保证任何尺寸下都完整显示
+  function fit() {
+    var el = document.getElementById('stage');
+    var w = el.clientWidth || 1;
+    var h = el.clientHeight || 1;
+    var s = Math.min(w, h) / 700;
+    el.style.transform = 'scale(' + s.toFixed(4) + ')';
+    el.style.transformOrigin = 'center center';
+  }
+  window.addEventListener('resize', fit);
+
+  function init() {
+    var el = document.getElementById('stage');
+    try {
+      ball = EmotionBall.create(el, {
+        emotion: '02',
+        shape: 'blob',
+        idle: { standbyAfter: 60000, sleepAfter: 180000 }
+      });
+      if (pending) {
+        ball.setEmotion(pending);
+        pending = null;
+      }
+      fit();
+      parent.postMessage({ type: 'ball-ready' }, '*');
+    } catch (e) {
+      parent.postMessage({ type: 'ball-error', message: String(e && e.message || e) }, '*');
+    }
+  }
+
+  window.addEventListener('message', function (ev) {
+    var d = ev.data;
+    if (!d || d.type !== 'emotion') return;
+    var id = String(d.id || '');
+    if (!ball) { pending = id; return; }
+    try {
+      ball.setEmotion(id);
+    } catch (e) { }
+  });
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+</script>
+</body>
+</html>

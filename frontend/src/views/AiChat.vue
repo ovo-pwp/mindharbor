@@ -60,6 +60,13 @@
         </div>
       </div>
 
+      <div class="buddy">
+        <div class="ball-wrap">
+          <iframe ref="ballFrame" src="/emotion-ball/embed.html" class="ball-frame" title="伙伴" />
+        </div>
+        <span class="buddy-text">{{ buddyText }}</span>
+      </div>
+
       <div class="composer">
         <el-input
           v-model="input"
@@ -78,7 +85,7 @@
 </template>
 
 <script setup>
-import { nextTick, onMounted, ref } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { marked } from 'marked'
 import { api } from '../api'
@@ -90,6 +97,29 @@ const input = ref('')
 const streaming = ref(false)
 const streamText = ref('')
 const toolHint = ref('')
+const ballFrame = ref(null)
+const ballEmotion = ref('02')
+const buddyState = ref('idle')
+
+const buddyText = computed(() => ({
+  idle: '我在',
+  thinking: '在想',
+  replying: '在说',
+  feeling: '我懂'
+}[buddyState.value] || '我在'))
+
+const setBall = (id) => {
+  ballEmotion.value = id
+  try {
+    ballFrame.value?.contentWindow?.postMessage({ type: 'emotion', id }, '*')
+  } catch (e) { }
+}
+
+watch(ballEmotion, (id) => {
+  try {
+    ballFrame.value?.contentWindow?.postMessage({ type: 'emotion', id }, '*')
+  } catch (e) { }
+})
 
 // 手机上 Enter 是换行不是发送，别给错误提示
 const placeholderText = (typeof window !== 'undefined' && window.innerWidth <= 768)
@@ -155,6 +185,8 @@ const send = async () => {
   streaming.value = true
   streamText.value = ''
   toolHint.value = ''
+  buddyState.value = 'thinking'
+  setBall('30')
   scrollBottom()
 
   try {
@@ -201,6 +233,10 @@ const send = async () => {
         }
         if (evt.type === 'delta') {
           streamText.value += evt.content
+          if (buddyState.value !== 'replying') {
+            buddyState.value = 'replying'
+            setBall('39')
+          }
           toolHint.value = ''
           scrollBottom()
         } else if (evt.type === 'tool') {
@@ -231,6 +267,8 @@ const send = async () => {
   } finally {
     streaming.value = false
     toolHint.value = ''
+    buddyState.value = 'idle'
+    setBall('02')
   }
 }
 
@@ -580,5 +618,37 @@ onMounted(loadSessions)
     font-size: 12px;
     padding: 6px 11px;
   }
+}
+
+.buddy {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 16px 8px;
+  flex: 0 0 auto;
+}
+
+.ball-wrap {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  overflow: hidden;
+  border-radius: 50%;
+}
+
+/* iframe 内部按 700x700 渲染，靠 scale 缩到 34px，球才完整 */
+.ball-frame {
+  width: 700px;
+  height: 700px;
+  border: 0;
+  display: block;
+  transform: scale(0.04857);
+  transform-origin: top left;
+}
+
+.buddy-text {
+  font-size: 12px;
+  color: var(--ink-3);
+  letter-spacing: 0.5px;
 }
 </style>
