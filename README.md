@@ -115,6 +115,53 @@ npm run dev
 
 患者账号已预置 14 天情绪记录、2 次测评、1 份已发布报告，以及与李明远医生的咨询关系与聊天记录。
 
+### 让外网访问（不买服务器）
+
+只有本机运行时，别人打不开。用内网穿透可以让外部访问，成本为零：
+
+**1. 装 cpolar**（<https://www.cpolar.com/download>，免费注册后在「验证」页拿 authtoken）
+
+```powershell
+& "C:\cpolar\cpolar\cpolar.exe" authtoken <你的token>
+```
+
+> 如果标准安装报 `1603`（日志里 `LaunchConditions failed` + `VersionNT=603`），
+> 用解包模式绕过：`msiexec /a cpolar_amd64.msi /qn TARGETDIR=C:\cpolar`
+
+**2. 启动隧道**
+
+双击 `启动隧道.bat`，它会先检查本地 8080 是否在跑，再建立隧道并打印公网地址。
+
+**3. 让它自动守护（推荐）**
+
+`tunnel-keeper.ps1` 每 30 分钟检查一次，断了自动重连，并把当前地址写到桌面 `mindharbor-url.txt`：
+
+```powershell
+# 部署到纯英文路径，避开中文编码问题
+mkdir C:\mindharbor
+copy tunnel-keeper.ps1 C:\mindharbor\
+
+# 单次检查
+powershell -NoProfile -ExecutionPolicy Bypass -File C:\mindharbor\tunnel-keeper.ps1
+
+# 常驻（每 30 分钟一轮）
+powershell -NoProfile -ExecutionPolicy Bypass -File C:\mindharbor\tunnel-keeper.ps1 -Loop
+```
+
+开机自启：把下面内容存成 bat 放进 `shell:startup` 目录。
+
+```bat
+start "" /min powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "C:\mindharbor\tunnel-keeper.ps1" -Loop
+```
+
+**已知限制**
+
+| 项 | 说明 |
+|---|---|
+| 电脑不能关 | 隧道把本机当服务器，关机/睡眠即断 |
+| 域名 24 小时换 | 免费版限制，要固定需 9 元/月套餐 |
+| 带宽 1 Mbps | 免费版，够看页面，图片稍慢 |
+
 ## 五、切换到 MySQL
 
 ```yaml
