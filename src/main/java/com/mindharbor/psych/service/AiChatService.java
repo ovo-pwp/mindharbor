@@ -220,6 +220,8 @@ public class AiChatService {
 
         List<Map<String, Object>> tools = skillRegistry.toolsPayload();
 
+        boolean anyToolCalled = false;
+
         for (int round = 0; round < MAX_TOOL_ROUNDS; round++) {
             QwenClient.StreamOutcome out = qwenClient.stream(payload, tools,
                     delta -> {
@@ -229,8 +231,9 @@ public class AiChatService {
                     err -> sendQuietly(emitter, event("error", Map.of("message", err))));
 
             if (out.toolCalls().isEmpty()) {
-                return;
+                break;
             }
+            anyToolCalled = true;
 
             // 回传 assistant 的 tool_calls，接着逐个执行
             Map<String, Object> assistantMsg = new HashMap<>();
@@ -257,7 +260,35 @@ public class AiChatService {
                 payload.add(toolMsg);
             }
         }
-        log.warn("工具调用达到上限 {} 轮", MAX_TOOL_ROUNDS);
+        if (!anyToolCalled) {
+            localFallback(userId, content, emitter);
+        } else {
+            log.debug("模型已调用工具，跳过本地兜底");
+        }
+    }
+
+    /**
+     * 本地兜底：模型没有（或不能）调用工具时，用关键词规则把操作做掉。
+     *
+     * 为什么需要：agnes-2.5-flash 这类模型不支持 function calling，
+     * 用户说「帮我记录一下心情很差」它只会追问，数据库里什么都没有。
+     * 这里让「说话」和「办事」解耦——模型负责温度，规则负责落地。
+     */
+    private void localFallback(Long userId, String content, SseEmitter emitter) {
+        AiSkill skill = skillRegistry.matchLocal(content);
+        if (skill == null) {
+            return;
+        }
+        String label = SKILL_LABELS.getOrDefault(skill.name(), skill.name());
+        sendQuietly(emitter, event("tool", Map.of("name", skill.name(), "label", label)));
+        try {
+            String result = skillRegistry.execute(userId, skill.name(),
+                    skillRegistry.extractLocalArgs(skill.name(), content));
+            log.info("本地兜底执行技能 {}：{}", skill.name(), result);
+            sendQuietly(emitter, event("tool_result", Map.of("label", label, "text", result)));
+        } catch (Exception e) {
+            log.warn("本地兜底执行失败", e);
+        }
     }
 
     /** 本地模式：技能规则触发 → 知识库 → 共情模板 */

@@ -97,6 +97,7 @@ const input = ref('')
 const streaming = ref(false)
 const streamText = ref('')
 const toolHint = ref('')
+const toolResults = ref([])
 const ballFrame = ref(null)
 const ballEmotion = ref('02')
 const buddyState = ref('idle')
@@ -185,6 +186,7 @@ const send = async () => {
   streaming.value = true
   streamText.value = ''
   toolHint.value = ''
+  toolResults.value = []
   buddyState.value = 'thinking'
   setBall('30')
   scrollBottom()
@@ -243,6 +245,9 @@ const send = async () => {
           // 模型正在调用某个技能，先给用户一个可见的反馈
           toolHint.value = evt.label || evt.name || ''
           scrollBottom()
+        } else if (evt.type === 'tool_result') {
+          // 本地兜底执行了技能，结果单独记下，稍后附在回复末尾
+          toolResults.value.push(evt)
         } else if (evt.type === 'meta') {
           if (!currentId.value && evt.sessionId) {
             currentId.value = evt.sessionId
@@ -253,6 +258,11 @@ const send = async () => {
           ElMessage.warning(evt.message || '生成中断')
         }
       }
+    }
+
+    if (toolResults.value.length) {
+      const lines = toolResults.value.map((r) => '*✅ ' + r.text + '*').join('\n')
+      streamText.value += (streamText.value ? '\n\n---\n' : '') + lines
     }
 
     if (streamText.value) {
