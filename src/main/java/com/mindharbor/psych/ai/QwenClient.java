@@ -107,7 +107,7 @@ public class QwenClient {
             if (response.statusCode() != 200) {
                 String err = new String(response.body().readAllBytes(), StandardCharsets.UTF_8);
                 log.warn("大模型返回 {}: {}", response.statusCode(), err);
-                onError.accept("大模型服务暂时不可用（HTTP " + response.statusCode() + "）");
+                onError.accept(friendlyError(response.statusCode(), err));
                 return new StreamOutcome("", List.of());
             }
 
@@ -172,6 +172,27 @@ public class QwenClient {
                     e.getValue().toString()));
         }
         return new StreamOutcome(full.toString(), toolCalls);
+    }
+
+    /** 把上游的错误码翻译成人能看懂的一句话，避免用户看到裸的 HTTP 500 */
+    private String friendlyError(int status, String body) {
+        String b = body == null ? "" : body;
+        if (b.contains("insufficient_user_quota") || b.contains("预扣费失败")) {
+            return "AI 额度已用完，充值后会自动恢复。现在先用本地模式陪你聊。";
+        }
+        if (status == 401) {
+            return "AI 服务密钥无效或已过期，请检查配置。";
+        }
+        if (status == 429) {
+            return "请求太频繁了，等几秒再说。";
+        }
+        if (b.contains("get_channel_failed")) {
+            return "这个模型暂时没有可用渠道，换一个模型试试。";
+        }
+        if (status == 402) {
+            return "AI 账户余额不足，充值后会自动恢复。";
+        }
+        return "大模型服务暂时不可用（HTTP " + status + "），已切换到本地模式。";
     }
 
     /** 非流式一次性调用，用于「AI 辅助生成评估报告」这类任务 */
