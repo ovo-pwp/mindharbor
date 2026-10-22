@@ -14,7 +14,7 @@
 <table>
 <tr>
 <td width="33%"><img src="docs/screenshots/01-home.png" alt="患者首页"><br><sub>首页 · 情绪概览与推荐</sub></td>
-<td width="33%"><img src="docs/screenshots/02-ai.png" alt="AI 心理助手"><br><sub>AI 助手 · 流式对话 + 技能调用</sub></td>
+<td width="33%"><img src="docs/screenshots/02-ai.png" alt="AI 心理助手"><br><sub>AI 助手 · 流式对话 + 表情伙伴</sub></td>
 <td width="33%"><img src="docs/screenshots/03-symptoms.png" alt="情绪记录"><br><sub>情绪记录 · 趋势图与明细</sub></td>
 </tr>
 <tr>
@@ -23,7 +23,7 @@
 <td><img src="docs/screenshots/06-doctors.png" alt="找咨询师"><br><sub>找咨询师 · 筛选与申请</sub></td>
 </tr>
 <tr>
-<td colspan="3"><img src="docs/screenshots/10-practice.png" alt="心理练习"><br><sub>心理练习 · 呼吸引导 / 思维记录 / 身体扫描</sub></td>
+<td colspan="3"><img src="docs/screenshots/10-practice.png" alt="心理练习"><br><sub>心理练习 · 4-7-8 呼吸 / 思维记录 / 身体扫描（只记「做过」，不做打卡）</sub></td>
 </tr>
 </table>
 
