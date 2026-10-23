@@ -61,8 +61,15 @@
       </div>
 
       <div class="buddy">
-        <div class="ball-wrap">
+        <div
+          class="ball-wrap"
+          :class="{ poked: poking }"
+          @mouseenter="onBallEnter"
+          @mouseleave="onBallLeave"
+          @click="onBallTap"
+        >
           <iframe ref="ballFrame" src="/emotion-ball/embed.html" class="ball-frame" title="伙伴" />
+          <span class="ball-mask" />
         </div>
         <span class="buddy-text">{{ buddyText }}</span>
       </div>
@@ -108,6 +115,42 @@ const buddyText = computed(() => ({
   replying: '在说',
   feeling: '我懂'
 }[buddyState.value] || '我在'))
+
+// ---- 球的小互动：悬停会「好奇」，点它会「惊讶 / 害羞 / 无奈」----
+const poking = ref(false)
+let tapCount = 0
+let tapTimer = null
+
+const canInteract = () => buddyState.value === 'idle'
+
+const onBallEnter = () => {
+  if (canInteract()) setBall('03')
+}
+
+const onBallLeave = () => {
+  clearTimeout(tapTimer)
+  tapCount = 0
+  if (canInteract()) setBall('02')
+}
+
+const onBallTap = () => {
+  if (!canInteract()) return
+  tapCount++
+  clearTimeout(tapTimer)
+
+  // 点一下惊讶，两下害羞，三下以上无奈
+  if (tapCount === 1) setBall('13')
+  else if (tapCount === 2) setBall('14')
+  else setBall('18')
+
+  poking.value = true
+  setTimeout(() => { poking.value = false }, 180)
+
+  tapTimer = setTimeout(() => {
+    tapCount = 0
+    if (canInteract()) setBall('02')
+  }, 1400)
+}
 
 const setBall = (id) => {
   ballEmotion.value = id
@@ -697,5 +740,27 @@ onMounted(loadSessions)
   font-size: 12px;
   color: var(--ink-3);
   letter-spacing: 0.5px;
+}
+
+/* 球可交互：位移在 .ball-wrap 上（跟随鼠标），
+   被点时缩小的是内层 iframe，避免和视线位移抢同一个 transform */
+.ball-wrap {
+  position: relative;
+  cursor: pointer;
+}
+
+/* iframe 内部是独立文档，点击不会冒泡上来，用一层透明遮罩接管点击 */
+.ball-mask {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+}
+
+.ball-wrap .ball-frame {
+  transition: transform 0.16s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.ball-wrap.poked .ball-frame {
+  transform: scale(0.068);
 }
 </style>
