@@ -50,6 +50,12 @@
           <span class="muted">第 {{ round }} / {{ totalRounds }} 轮</span>
         </div>
 
+        <div class="pball-stage">
+          <div ref="pballWrap" class="pball-wrap">
+            <iframe ref="pballFrame" src="/emotion-ball/embed.html" class="pball-frame" title="伙伴" />
+          </div>
+        </div>
+
         <div class="breath-area">
           <div class="ring-outer">
             <div
@@ -205,6 +211,25 @@ let timer = null
 
 const phaseName = computed(() => phases[phaseIdx.value].name)
 
+// ---- 伙伴球：跟着呼吸节奏缩放，吸气放大、呼气缩小 ----
+const pballFrame = ref(null)
+const pballWrap = ref(null)
+const pballEmotion = ref('02')
+
+const sendBall = (id) => {
+  pballEmotion.value = id
+  try {
+    pballFrame.value?.contentWindow?.postMessage({ type: 'emotion', id }, '*')
+  } catch (e) { }
+}
+
+const scaleBall = (factor, ms) => {
+  const el = pballWrap.value
+  if (!el) return
+  el.style.transition = 'transform ' + ms + 'ms cubic-bezier(0.37, 0, 0.63, 1)'
+  el.style.transform = 'scale(' + factor + ')'
+}
+
 const start = (t) => {
   startedAt.value = Date.now()
   if (t.type === 'BREATHING') { enterBreathing() }
@@ -223,6 +248,7 @@ const enterBreathing = () => {
   setTimeout(() => {
     scale.value = phases[0].scale
     transMs.value = phases[0].seconds * 1000
+    scaleBall(1.2, phases[0].seconds * 1000)
     runTimer()
   }, 60)
 }
@@ -246,11 +272,17 @@ const runTimer = () => {
     remain.value = p.seconds
     scale.value = p.scale
     transMs.value = p.seconds * 1000
+    // 球跟圆圈同步：吸气胀起来、屏息保持、呼气收回去
+    scaleBall(p.name === '呼气' ? 0.82 : 1.2, p.seconds * 1000)
   }, 1000)
 }
 
 const finishBreathing = async () => {
   clearInterval(timer)
+  scaleBall(1, 400)
+  sendBall('19')
+  scaleBall(1, 400)
+  sendBall('19')
   const secs = Math.round((Date.now() - startedAt.value) / 1000)
   await save('BREATHING', secs, null)
   ElMessage({ message: '做完了，慢慢来', type: 'success', duration: 1800 })
@@ -259,6 +291,7 @@ const finishBreathing = async () => {
 
 const stopBreathing = async () => {
   clearInterval(timer)
+  scaleBall(1, 300)
   const secs = Math.round((Date.now() - startedAt.value) / 1000)
   if (secs >= 5) await save('BREATHING', secs, null)
   backToList()
@@ -736,5 +769,29 @@ onBeforeUnmount(() => clearInterval(timer))
     font-size: 13.5px;
     line-height: 1.9;
   }
+}
+
+.pball-stage {
+  display: flex;
+  justify-content: center;
+  padding: 6px 0 2px;
+}
+
+.pball-wrap {
+  width: 68px;
+  height: 68px;
+  overflow: hidden;
+  border-radius: 50%;
+  transition: transform 1s ease;
+}
+
+/* iframe 内部按 700x700 渲染，缩到 68px 显示 */
+.pball-frame {
+  width: 700px;
+  height: 700px;
+  border: 0;
+  display: block;
+  transform: scale(0.0971);
+  transform-origin: top left;
 }
 </style>

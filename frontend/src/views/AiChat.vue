@@ -66,6 +66,10 @@
           :class="{ poked: poking }"
           @mouseenter="onBallEnter"
           @mouseleave="onBallLeave"
+          @mousedown="onBallDown"
+          @touchstart.prevent="onTouchDown"
+          @touchmove.prevent="onTouchMove"
+          @touchend.prevent="onTouchEnd"
           @click="onBallTap"
         >
           <iframe ref="ballFrame" src="/emotion-ball/embed.html" class="ball-frame" title="伙伴" />
@@ -135,6 +139,7 @@ const onBallLeave = () => {
 
 const onBallTap = () => {
   if (!canInteract()) return
+  if (dragMoved) { dragMoved = false; return }
   tapCount++
   clearTimeout(tapTimer)
 
@@ -150,6 +155,99 @@ const onBallTap = () => {
     tapCount = 0
     if (canInteract()) setBall('02')
   }, 1400)
+}
+
+// ---- 拖动：按住球拖走，松手弹回原位 ----
+const dragging = ref(false)
+let dragOrigin = null
+let dragMoved = false
+
+const moveBallTo = (dx, dy, scale) => {
+  const el = document.querySelector('.ball-wrap')
+  if (!el) return
+  el.style.transition = 'none'
+  el.style.transform = 'translate(' + dx + 'px, ' + dy + 'px) scale(' + scale + ')'
+  el.style.zIndex = '5'
+}
+
+const resetBallPos = () => {
+  const el = document.querySelector('.ball-wrap')
+  if (!el) return
+  el.style.transition = 'transform 0.42s cubic-bezier(0.34, 1.56, 0.64, 1)'
+  el.style.transform = ''
+  el.style.zIndex = ''
+}
+
+const onBallDown = (e) => {
+  if (!canInteract()) return
+  dragging.value = true
+  dragMoved = false
+  dragOrigin = { x: e.clientX, y: e.clientY }
+  setBall('17')
+}
+
+const dragTo = (cx, cy) => {
+  if (!dragging.value || !dragOrigin) return
+  const dx = cx - dragOrigin.x
+  const dy = cy - dragOrigin.y
+  if (Math.abs(dx) > 4 || Math.abs(dy) > 4) dragMoved = true
+  // 拖动幅度限制在 90px 内，别拖出页面
+  const lim = (v) => Math.max(-90, Math.min(90, v))
+  moveBallTo(lim(dx), lim(dy), 1.12)
+}
+
+const endDrag = () => {
+  if (!dragging.value) return
+  dragging.value = false
+  dragOrigin = null
+  resetBallPos()
+  if (canInteract()) setBall('02')
+}
+
+const onTouchDown = (e) => {
+  const t = e.touches[0]
+  if (!t) return
+  onBallDown({ clientX: t.clientX, clientY: t.clientY })
+}
+
+const onTouchMove = (e) => {
+  const t = e.touches[0]
+  if (t) dragTo(t.clientX, t.clientY)
+}
+
+const onTouchEnd = () => {
+  const wasMoved = dragMoved
+  endDrag()
+  // 没拖动就是点了一下
+  if (!wasMoved) onBallTap()
+}
+
+/**
+ * 根据 AI 回复的调性挑一个收尾表情。
+ * 现在球只知道「在思考/在说话」，不知道说了什么——这里补上语义。
+ */
+const pickEmotionByText = (text) => {
+  if (!text) return '02'
+  const t = text.slice(-600)
+  // 危机信号：球要「专注」，不能嘻嘻哈哈
+  if (/自杀|不想活|活不下去|伤害自己|结束生命|活着没意思|轻生/.test(t)) return '16'
+  // 安慰陪伴：失落但陪着（不是开心）
+  if (/抱抱|陪你|不容易|辛苦了|会好|理解你|心疼|难受|慢慢来/.test(t)) return '12'
+  // 鼓励肯定
+  if (/恭喜|进步|真棒|为你高兴|做得好|很勇敢/.test(t)) return '10'
+  return '02'
+}
+
+const settleEmotion = (text) => {
+  const e = pickEmotionByText(text)
+  setBall(e)
+  if (e !== '02') {
+    // 几秒后回到待机，不让表情一直挂着
+    const hold = e === '16' ? 6000 : (e === '12' ? 4200 : 3000)
+    setTimeout(() => {
+      if (buddyState.value === 'idle') setBall('02')
+    }, hold)
+  }
 }
 
 const setBall = (id) => {
@@ -228,6 +326,7 @@ const send = async () => {
   messages.value.push({ role: 'user', content })
   streaming.value = true
   streamText.value = ''
+  let finalText = ''
   toolHint.value = ''
   toolResults.value = []
   buddyState.value = 'thinking'
@@ -308,8 +407,9 @@ const send = async () => {
       streamText.value += (streamText.value ? '\n\n---\n' : '') + lines
     }
 
-    if (streamText.value) {
-      messages.value.push({ role: 'assistant', content: streamText.value })
+    finalText = streamText.value
+    if (finalText) {
+      messages.value.push({ role: 'assistant', content: finalText })
     }
     streamText.value = ''
     await loadSessions()
@@ -321,7 +421,7 @@ const send = async () => {
     streaming.value = false
     toolHint.value = ''
     buddyState.value = 'idle'
-    setBall('02')
+    settleEmotion(finalText)
   }
 }
 
@@ -336,6 +436,11 @@ const onMouseMove = (e) => {
 
   const x = e.clientX
   const y = e.clientY
+  if (dragging.value) {
+    dragTo(x, y)
+    return
+  }
+
   const el = document.querySelector('.ball-wrap')
   if (!el) return
   const r = el.getBoundingClientRect()
@@ -356,10 +461,12 @@ const onMouseMove = (e) => {
 
 onMounted(() => {
   window.addEventListener('mousemove', onMouseMove, { passive: true })
+  window.addEventListener('mouseup', endDrag)
 })
 
 onBeforeUnmount(() => {
   window.removeEventListener('mousemove', onMouseMove)
+  window.removeEventListener('mouseup', endDrag)
 })
 
 onMounted(loadSessions)
