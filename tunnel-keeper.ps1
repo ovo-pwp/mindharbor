@@ -1,5 +1,6 @@
-# MindHarbor tunnel keeper
-# Keeps the cpolar tunnel alive and refreshes the public URL file.
+﻿# MindHarbor tunnel keeper
+# Keeps the cpolar tunnel alive, refreshes the public URL file, and makes a
+# daily backup of the H2 database.
 #
 # Usage:
 #   powershell -ExecutionPolicy Bypass -File tunnel-keeper.ps1          (one pass)
@@ -7,13 +8,18 @@
 
 $ErrorActionPreference = "SilentlyContinue"
 
-$Cpolar  = "C:\cpolar\cpolar\cpolar.exe"
-$Root    = $PSScriptRoot
-$LogFile = Join-Path $Root "cpolar.log"
-$OutFile = Join-Path $env:USERPROFILE "Desktop\mindharbor-url.txt"
-$MyLog   = Join-Path $Root "tunnel-keeper.log"
-$Health  = "http://localhost:8080/api/public/health"
-$Loop    = $args -contains "-Loop"
+$Cpolar   = "C:\cpolar\cpolar\cpolar.exe"
+$Root     = $PSScriptRoot
+$LogFile  = Join-Path $Root "cpolar.log"
+$OutFile  = Join-Path $env:USERPROFILE "Desktop\mindharbor-url.txt"
+$MyLog    = Join-Path $Root "tunnel-keeper.log"
+$Health   = "http://localhost:8080/api/public/health"
+$Loop     = $args -contains "-Loop"
+
+# 数据库与备份位置
+$DbFile   = "D:\智能体\2026-10-17-15-28-34\psych-counseling\data\mindharbor.mv.db"
+$BakDir   = Join-Path $Root "backup"
+$KeepDays = 7
 
 function KLog($m) {
     $line = "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  $m"
@@ -52,7 +58,42 @@ function Test-UrlAlive($u) {
     } catch { return $false }
 }
 
+# 每天备份一次数据库，只留最近 7 份。
+# H2 是单文件库，进程异常退出可能损坏，备份是唯一的保险。
+function Invoke-Backup {
+    if (-not (Test-Path $DbFile)) { return }
+    if (-not (Test-Path $BakDir)) {
+        New-Item -ItemType Directory -Force -Path $BakDir | Out-Null
+    }
+
+    $today = Get-Date -Format 'yyyy-MM-dd'
+    $dst = Join-Path $BakDir ("mindharbor-" + $today + ".db")
+    if (Test-Path $dst) { return }
+
+    # 这台机器上 Copy-Item 和 File.Copy 都会抛 Win32 error 0，但文件其实已复制成功。
+    # 所以不信任调用返回值，改用「目标文件存在且大小一致」来判断结果。
+    try { [IO.File]::Copy($DbFile, $dst, $true) } catch { }
+
+    $srcBytes = (Get-Item $DbFile).Length
+    $okSize = (Test-Path $dst) -and ((Get-Item $dst).Length -eq $srcBytes)
+
+    if ($okSize) {
+        KLog ("db backup ok -> " + (Split-Path $dst -Leaf) + " (" + [math]::Round($srcBytes / 1KB) + "KB)")
+
+        $olds = @(Get-ChildItem $BakDir -Filter "mindharbor-*.db" | Sort-Object Name -Descending)
+        if ($olds.Count -gt $KeepDays) {
+            $olds | Select-Object -Skip $KeepDays | ForEach-Object {
+                Remove-Item $_.FullName -Force -ErrorAction SilentlyContinue
+            }
+        }
+    } else {
+        KLog "db backup failed: file missing or size mismatch"
+    }
+}
+
 function Invoke-Check {
+    Invoke-Backup
+
     if (-not (Test-LocalAlive)) {
         KLog "local 8080 not responding, skip"
         return "skip"

@@ -202,6 +202,20 @@ powershell -NoProfile -ExecutionPolicy Bypass -File C:\mindharbor\tunnel-keeper.
 start "" /min powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "C:\mindharbor\tunnel-keeper.ps1" -Loop
 ```
 
+**4. 数据库自动备份**
+
+H2 是单文件库（`data/mindharbor.mv.db`），进程异常退出可能损坏，备份是唯一的保险。
+`tunnel-keeper.ps1` 每轮检查时会顺手做一次当日备份（同一天只做一次），保留最近 7 份：
+
+```
+C://mindharbor//backup//mindharbor-2026-10-26.db
+```
+
+恢复方式：停掉服务，把备份文件覆盖回 `data/mindharbor.mv.db`，再启动。
+
+> 注意：本机 `Copy-Item` 与 `[IO.File]::Copy` 复制 H2 文件时会抛 Win32 error 0
+> （实际已复制成功），脚本因此改用「目标文件大小与源文件一致」判断结果。
+
 **已知限制**
 
 | 项 | 说明 |
