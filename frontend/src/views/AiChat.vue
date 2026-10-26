@@ -75,7 +75,14 @@
           <iframe ref="ballFrame" src="/emotion-ball/embed.html" class="ball-frame" title="伙伴" />
           <span class="ball-mask" />
         </div>
-        <span class="buddy-text">{{ buddyText }}</span>
+        <transition name="menu-fade">
+          <div v-if="menuOpen" class="ball-menu">
+            <button v-for="a in menuActions" :key="a.key" class="menu-item" @click.stop="a.run()">
+              {{ a.label }}
+            </button>
+          </div>
+        </transition>
+        <span class="buddy-text">{{ menuOpen ? '想到哪儿去？' : buddyText }}</span>
       </div>
 
       <div class="composer">
@@ -140,6 +147,7 @@ const onBallLeave = () => {
 const onBallTap = () => {
   if (!canInteract()) return
   if (dragMoved) { dragMoved = false; return }
+  if (longPressed) { longPressed = false; return }
   tapCount++
   clearTimeout(tapTimer)
 
@@ -178,25 +186,71 @@ const resetBallPos = () => {
   el.style.zIndex = ''
 }
 
+// ---- 长按弹快捷菜单（800ms）----
+const menuOpen = ref(false)
+let pressTimer = null
+let longPressed = false
+
+const menuActions = [
+  { key: 'new', label: '新对话', run: () => { closeMenu(); newSession() } },
+  { key: 'breathe', label: '做个呼吸', run: () => { closeMenu(); window.location.hash = '#/practice' } },
+  { key: 'trend', label: '看情绪趋势', run: () => { closeMenu(); window.location.hash = '#/symptoms' } }
+]
+
+const openMenu = () => {
+  longPressed = true
+  menuOpen.value = true
+  setBall('03')
+}
+
+const closeMenu = () => {
+  if (!menuOpen.value) return
+  menuOpen.value = false
+  longPressed = false
+  if (canInteract()) setBall('02')
+}
+
+const onDocClick = (e) => {
+  if (!menuOpen.value) return
+  if (e.target.closest && (e.target.closest('.ball-menu') || e.target.closest('.ball-wrap'))) return
+  closeMenu()
+}
+
 const onBallDown = (e) => {
   if (!canInteract()) return
   dragging.value = true
   dragMoved = false
+  longPressed = false
   dragOrigin = { x: e.clientX, y: e.clientY }
   setBall('17')
+
+  clearTimeout(pressTimer)
+  pressTimer = setTimeout(() => {
+    pressTimer = null
+    if (!dragMoved) {
+      dragging.value = false
+      dragOrigin = null
+      resetBallPos()
+      openMenu()
+    }
+  }, 800)
 }
 
 const dragTo = (cx, cy) => {
   if (!dragging.value || !dragOrigin) return
   const dx = cx - dragOrigin.x
   const dy = cy - dragOrigin.y
-  if (Math.abs(dx) > 4 || Math.abs(dy) > 4) dragMoved = true
+  if (Math.abs(dx) > 8 || Math.abs(dy) > 8) {
+    dragMoved = true
+    if (pressTimer) { clearTimeout(pressTimer); pressTimer = null }
+  }
   // 拖动幅度限制在 90px 内，别拖出页面
   const lim = (v) => Math.max(-90, Math.min(90, v))
   moveBallTo(lim(dx), lim(dy), 1.12)
 }
 
 const endDrag = () => {
+  if (pressTimer) { clearTimeout(pressTimer); pressTimer = null }
   if (!dragging.value) return
   dragging.value = false
   dragOrigin = null
@@ -462,11 +516,13 @@ const onMouseMove = (e) => {
 onMounted(() => {
   window.addEventListener('mousemove', onMouseMove, { passive: true })
   window.addEventListener('mouseup', endDrag)
+  document.addEventListener('click', onDocClick)
 })
 
 onBeforeUnmount(() => {
   window.removeEventListener('mousemove', onMouseMove)
   window.removeEventListener('mouseup', endDrag)
+  document.removeEventListener('click', onDocClick)
 })
 
 onMounted(loadSessions)
@@ -818,6 +874,7 @@ onMounted(loadSessions)
 }
 
 .buddy {
+  position: relative;   /* 长按菜单以它为定位基准 */
   display: flex;
   align-items: center;
   gap: 8px;
@@ -869,5 +926,52 @@ onMounted(loadSessions)
 
 .ball-wrap.poked .ball-frame {
   transform: scale(0.068);
+}
+
+/* 长按菜单 */
+.ball-menu {
+  position: absolute;
+  left: 54px;
+  bottom: 50%;
+  transform: translateY(50%);
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 5px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: 0 10px 28px rgba(40, 60, 50, 0.14);
+  z-index: 30;
+  min-width: 108px;
+}
+
+.menu-item {
+  border: none;
+  background: transparent;
+  text-align: left;
+  padding: 8px 12px;
+  font-size: 13px;
+  color: var(--ink-2);
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+}
+
+.menu-item:hover {
+  background: var(--sage-soft);
+  color: var(--sage-dark);
+}
+
+.menu-fade-enter-active,
+.menu-fade-leave-active {
+  transition: opacity 0.16s, transform 0.16s;
+}
+
+.menu-fade-enter-from,
+.menu-fade-leave-to {
+  opacity: 0;
+  transform: translateY(50%) translateX(-6px);
 }
 </style>
