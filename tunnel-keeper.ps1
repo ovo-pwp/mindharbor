@@ -20,6 +20,7 @@ $Loop     = $args -contains "-Loop"
 $DbFile   = "D:\智能体\2026-10-17-15-28-34\psych-counseling\data\mindharbor.mv.db"
 $BakDir   = Join-Path $Root "backup"
 $KeepDays = 7
+$AppDir   = "D://智能体//2026-10-17-15-28-34//psych-counseling"
 
 function KLog($m) {
     $line = "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  $m"
@@ -91,11 +92,53 @@ function Invoke-Backup {
     }
 }
 
+# 启动应用（只在没有 java 进程时调用，绝不强杀——H2 文件库禁不起）
+function Start-App {
+    if ((Get-Process java -ErrorAction SilentlyContinue | Measure-Object).Count -gt 0) { return }
+
+    $jar = Join-Path $AppDir "target\psych-counseling-1.0.0.jar"
+    if (-not (Test-Path $jar)) { KLog "app jar missing, cannot start"; return }
+
+    # 把 ai-config.env 里的键值读进当前进程环境（API key、模型名等）
+    $envFile = Join-Path $AppDir "ai-config.env"
+    if (Test-Path $envFile) {
+        Get-Content $envFile -Encoding UTF8 | ForEach-Object {
+            if ($_ -match '^\s*([A-Za-z_][A-Za-z0-9_]*)=(.*)$') {
+                [Environment]::SetEnvironmentVariable($matches[1], $matches[2], 'Process')
+            }
+        }
+    }
+
+    KLog "starting app"
+    $java = Join-Path $AppDir ".tools\jdk\bin\java.exe"
+    $runLog = Join-Path $AppDir "run.log"
+    Start-Process -FilePath $java `
+        -ArgumentList "-Dfile.encoding=UTF-8", "-jar", "target\psych-counseling-1.0.0.jar", "--server.port=8080", "--app.demo-accounts=false" `
+        -WorkingDirectory $AppDir `
+        -RedirectStandardOutput $runLog -RedirectStandardError ($runLog + ".err") `
+        -WindowStyle Hidden
+}
+
 function Invoke-Check {
     Invoke-Backup
 
     if (-not (Test-LocalAlive)) {
-        KLog "local 8080 not responding, skip"
+        $javaCount = (Get-Process java -ErrorAction SilentlyContinue | Measure-Object).Count
+        if ($javaCount -eq 0) {
+            KLog "app not running, starting it"
+            Start-App
+            for ($i = 0; $i -lt 16; $i++) {
+                Start-Sleep -Seconds 3
+                if (Test-LocalAlive) { KLog "app is up"; break }
+            }
+        } else {
+            KLog "java process exists but 8080 not ready, wait next round"
+            return "skip"
+        }
+    }
+
+    if (-not (Test-LocalAlive)) {
+        KLog "app still not responding, skip tunnel"
         return "skip"
     }
 
@@ -114,8 +157,16 @@ function Invoke-Check {
     if ($running) { Get-Process cpolar | Stop-Process -Force; Start-Sleep -Seconds 2 }
 
     KLog "starting cpolar"
-    $env:HTTP_PROXY = ""
-    $env:HTTPS_PROXY = ""
+    # 必须把代理清干净：本机会话带着 http_proxy 变量，cpolar 会把本地 8080 的转发
+    # 也走代理，表现是「隧道建立成功，但访问返回 404 / i/o timeout」。
+    foreach ($k in @("HTTP_PROXY","HTTPS_PROXY","ALL_PROXY","http_proxy","https_proxy","all_proxy")) {
+        Remove-Item -Path ("Env:" + $k) -ErrorAction SilentlyContinue
+    }
+    try { [System.Net.WebRequest]::DefaultWebProxy = New-Object System.Net.WebProxy } catch { }
+    # 注意：不能在这里用 -RedirectStandardOutput。父进程退出时管道断开，
+    # cpolar 写日志失败会跟着退出（表现为「隧道起来又消失」）。让它自己写文件。
+    # 必须用 --log=stdout 加重定向。实测 -log <文件路径> 会让隧道分配异常
+    # （日志正常但公网访问一直 404）。重定向依赖父进程存活，所以只适合 -Loop 常驻模式。
     Start-Process -FilePath $Cpolar -ArgumentList "http", "8080", "--log=stdout" `
         -RedirectStandardOutput $LogFile -RedirectStandardError ($LogFile + ".err") `
         -WindowStyle Hidden
