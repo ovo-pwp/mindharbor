@@ -192,8 +192,32 @@ function Invoke-Check {
     return "failed"
 }
 
+$consecutiveFail = 0
+
 do {
     $result = Invoke-Check
+
+    if ($result -eq "skip" -or $result -eq "failed") {
+        $consecutiveFail++
+        KLog ("consecutive failures: " + $consecutiveFail)
+    } else {
+        $consecutiveFail = 0
+    }
+
+    # 连续 3 轮（约 1.5 小时）都没救回来，弹窗叫人，别让它静默死掉
+    if ($consecutiveFail -ge 3) {
+        $msg = "MindHarbor 已经连续 " + $consecutiveFail + " 轮无法恢复。" + "`r`n`r`n"
+        $msg += "服务或隧道可能已经挂了，请检查：" + "`r`n"
+        $msg += "1) 本地 http://localhost:8080 能不能打开" + "`r`n"
+        $msg += "2) C://mindharbor//tunnel-keeper.log 最后几行写了什么" + "`r`n`r`n"
+        $msg += "（点掉这个弹窗后守护会继续重试）"
+        try {
+            Add-Type -AssemblyName System.Windows.Forms
+            [System.Windows.Forms.MessageBox]::Show($msg, "MindHarbor 异常", "OK", "Warning") | Out-Null
+        } catch { }
+        $consecutiveFail = 0
+    }
+
     if (-not $Loop) { break }
     Start-Sleep -Seconds 1800
 } while ($true)
